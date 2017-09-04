@@ -1,0 +1,58 @@
+version: '3'
+
+services:
+  chronograf:
+    image: chronograf:1.3.4.0-alpine
+    volumes:
+      - ./docker_data/chronograf/data:/var/lib/chronograf
+    command: ["chronograf", "--influxdb-url=http://influxdb:8086"]
+    ports:
+      - "8888:8888"
+    networks:
+      - influx
+    depends_on:
+      - kapacitor
+      - influxdb
+
+  kapacitor:
+    image: kapacitor:1.3.1-alpine
+    volumes:
+      - ./docker_data/kapacitor/data:/var/lib/kapacitor
+      - ./docker_data/kapacitor/config/kapacitor.conf:/etc/kapacitor/kapacitor.conf:ro
+    ports:
+      - "9092:9092"
+    networks:
+      - influx
+    depends_on:
+      - influxdb
+
+  telegraf:
+    build:
+      context: ./docker_data/telegraf/df
+    volumes:
+      - ./docker_data/telegraf/config/telegraf.conf:/etc/telegraf/telegraf.conf:ro
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /var/run/utmp:/var/run/utmp
+    ports:
+      - "8125:8125"
+      - "8092:8092"
+      - "8094:8094"
+    networks:
+      - influx
+    depends_on:
+      - influxdb
+
+  influxdb:
+    image: influxdb:1.3.1-alpine
+    volumes:
+      - ./docker_data/influxdb/data:/var/lib/influxdb
+      - ./docker_data/influxdb/config/influxdb.conf:/etc/influxdb/influxdb.conf:ro
+    ports:
+      - "8086:8086"
+      - "8083:8083"
+      - "8088:8088"
+    networks:
+      - influx
+
+networks:
+  influx:
